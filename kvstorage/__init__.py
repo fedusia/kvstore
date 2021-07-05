@@ -1,6 +1,17 @@
 import threading
 
 
+class Storage:
+    def __init__(self, engine):
+        self.engine = engine
+
+    def get(self, key):
+        return self.engine.get(key)
+
+    def set(self, key, value):
+        return self.engine.set(key, value)
+
+
 class InMemStorage:
     def __init__(self):
         self.data = {}
@@ -14,5 +25,5 @@ class InMemStorage:
     def get(self, key):
         with self.lock:
             if key not in self.data.keys():
-                return None
+                return "{} not found".format(key)
             return self.data[key]

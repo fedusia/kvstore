@@ -1,14 +1,14 @@
 from fastapi import FastAPI
 
-from kvstorage import InMemStorage
+from kvstorage import InMemStorage, Storage
 
 app = FastAPI()
 
-storage = InMemStorage()
+storage = Storage(InMemStorage())
 
 
 @app.get("/")
-async def hello_world():
+def hello_world():
     return "<p>Hello world</p>"
 
 
