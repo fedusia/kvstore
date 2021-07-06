@@ -1,22 +1,13 @@
 import uvicorn
-from fastapi import FastAPI, APIRouter
-
-from kvstorage.storage import InMemStorage
-from kvstorage.core import Storage
-from kvstorage.httpserv.handlers import getter, setter, hello_world
+from fastapi_jsonrpc import API
+from kvstorage.httpserv.handlers import api_v1
 
 
 def create_app():
-    api = FastAPI()
-
+    api = API()
     # logger = config_logger()
     # config = set_config()
-    storage = Storage(engine=InMemStorage())
-    router = APIRouter()
-    router.add_api_route("/", endpoint=hello_world, methods=["GET"])
-    router.add_api_route("/get", endpoint=getter(storage), methods=["GET"])
-    router.add_api_route("/set", endpoint=setter(storage), methods=["POST"])
-    api.include_router(router)
+    api.bind_entrypoint(api_v1)
     return api
 
 
