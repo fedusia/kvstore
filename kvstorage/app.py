@@ -15,7 +15,7 @@ def create_app():
     router = APIRouter()
     router.add_api_route("/", endpoint=hello_world, methods=["GET"])
     router.add_api_route("/get", endpoint=getter(storage), methods=["GET"])
-    router.add_api_route("/set", endpoint=setter(storage), methods=["PUT"])
+    router.add_api_route("/set", endpoint=setter(storage), methods=["POST"])
     api.include_router(router)
     return api
 
