@@ -23,8 +23,9 @@ def setter(storage: Storage) -> str:
     return wrapped_setter
 
 
-api_v1 = Entrypoint("/api/v1/jsonrpc")
 storage = Storage(engine=InMemStorage())
+
+api_v1 = Entrypoint("/api/v1/jsonrpc")
 api_v1.add_method_route(hello_world, name="say_hello")
 api_v1.add_method_route(getter(storage), name="get")
 api_v1.add_method_route(setter(storage), name="set")
