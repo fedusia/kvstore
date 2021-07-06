@@ -3,7 +3,7 @@ from fastapi import FastAPI, APIRouter
 
 from kvstorage.storage import InMemStorage
 from kvstorage.core import Storage
-from kvstorage.httpserv.handlers import getter, set_wrap, hello_world
+from kvstorage.httpserv.handlers import getter, setter, hello_world
 
 
 def create_app():
@@ -15,7 +15,7 @@ def create_app():
     router = APIRouter()
     router.add_api_route("/", endpoint=hello_world, methods=["GET"])
     router.add_api_route("/get", endpoint=getter, methods=["GET"])
-    router.add_api_route("/set", endpoint=set_wrap(storage), methods=["PUT"])
+    router.add_api_route("/set", endpoint=setter(storage), methods=["PUT"])
     api.include_router(router)
     return api
 
