@@ -1,31 +1,50 @@
-from fastapi_jsonrpc import Entrypoint
-from kvstorage.core.logic import Storage
-from kvstorage.storage.db import InMemStorage
+from typing import Union
+from pydantic import BaseModel, Field, StrictStr
+from fastapi.requests import Request
+from fastapi.responses import Response
+from pydantic.error_wrappers import ValidationError
+import json
 
 
-def hello_world() -> str:
-    return "Hello World"
+class JSONRPCRequest(BaseModel):
+    """
+    Validating Data model for jsonrpc 2.0
+    """
+
+    jsonrpc: StrictStr = Field("2.0", const=True, example="2.0")
+    id: Union[StrictStr, int] = Field(None, example=0)
+    method: StrictStr
+    params: dict
 
 
-def getter(storage: Storage) -> str:
-    def wrapped_getter(key) -> str:
+async def jsonrpc_dispatcher(request: Request, call_next):
+    body = await request.body()
+    try:
+        JSONRPCRequest.validate(json.loads(body))
+    except ValidationError as e:
+        response = Response()
+        response.body = bytes(e.json(), "UTF-8")
+        response.headers["Content-type"] = "application/json"
+        return response
+    response = await call_next(request)
+    return response
+
+
+def hello_world():
+    return "Hello world"
+
+
+def getter(storage):
+    def wrapped_getter(key):
         body = storage.get(key)
         return body
 
     return wrapped_getter
 
 
-def setter(storage: Storage) -> str:
-    def wrapped_setter(key, value) -> str:
+def setter(storage):
+    def wrapped_setter(key, value):
         body = storage.set(key, value)
         return body
 
     return wrapped_setter
-
-
-storage = Storage(engine=InMemStorage())
-
-api_v1 = Entrypoint("/api/v1/jsonrpc")
-api_v1.add_method_route(hello_world, name="say_hello")
-api_v1.add_method_route(getter(storage), name="get")
-api_v1.add_method_route(setter(storage), name="set")
