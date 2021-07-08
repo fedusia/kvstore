@@ -38,7 +38,7 @@ def jsonrpc_error(params, error_data):
     if params.get("id"):
         jsonrpc["id"] = params["id"]
 
-    return json.dumps(jsonrpc)
+    return jsonrpc
 
 
 def jsonrpc_success(params, result):
@@ -47,13 +47,8 @@ def jsonrpc_success(params, result):
     return response
 
 
-async def hello_world(request: Request):
-    # get body
-    body = await request.body()
-
-    # deserialize
+def jsonrpc_parser(body):
     try:
-
         params = json.loads(body)
     except JSONDecodeError:
         params = {
@@ -61,14 +56,27 @@ async def hello_world(request: Request):
         }
         error_message = "Not a valid JSON document"
         return jsonrpc_error(params, error_message)
+    return params
+
+
+async def hello_world(request: Request):
+    # get body
+    body = await request.body()
+
+    # deserialize
+    params = jsonrpc_parser(body)
+    if params.get("error"):
+        return json.dumps(params)
 
     # validate
     checked = validate_jsonrpc(params)
     # do stuff/logic
     if not checked:
         error_message = "Not a valid jsonrpc request"
-        return jsonrpc_error(
-            version=params["jsonrpc"], id=params["id"], error_data=error_message
+        return json.dumps(
+            jsonrpc_error(
+                version=params["jsonrpc"], id=params["id"], error_data=error_message
+            )
         )
 
     result = await say_hello(params["params"]["name"])
