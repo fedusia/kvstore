@@ -29,15 +29,6 @@ def say_hello(name):
     return "Hello, {}".format(name)
 
 
-def serialize_to_jsonrpc(version, result, id):
-    jsonrpc = {
-        "jsonrpc": version,
-        "id": id,
-        "result": result,
-    }
-    return jsonrpc
-
-
 def jsonrpc_error(version, id, error_data):
     jsonrpc = {
         "jsonrpc": version,
@@ -48,11 +39,11 @@ def jsonrpc_error(version, id, error_data):
 
 
 def jsonrpc_success(params):
-    data = serialize_to_jsonrpc(
-        version=params["jsonrpc"],
-        result=say_hello(params["params"]["name"]),
-        id=params["id"],
-    )
+    data = {
+        "jsonrpc": params["jsonrpc"],
+        "id": params["id"],
+        "result": say_hello(params["params"]["name"]),
+    }
     response = json.dumps(data)
     return response
 
