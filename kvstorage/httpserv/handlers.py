@@ -1,5 +1,6 @@
 from fastapi import Request
 import json
+from json import JSONDecodeError
 
 # default handler do:
 # 1. get data from signate
@@ -25,16 +26,18 @@ def validate_jsonrpc(data: dict):
     return True
 
 
-def say_hello(name):
+async def say_hello(name):
     return "Hello, {}".format(name)
 
 
 def jsonrpc_error(params, error_data):
     jsonrpc = {
         "jsonrpc": params["jsonrpc"],
-        "id": params["id"],
         "error": {"code": -32600, "message": "Invalid Request", "data": error_data},
     }
+    if params.get("id"):
+        jsonrpc["id"] = params["id"]
+
     return json.dumps(jsonrpc)
 
 
@@ -47,8 +50,18 @@ def jsonrpc_success(params, result):
 async def hello_world(request: Request):
     # get body
     body = await request.body()
+
     # deserialize
-    params = json.loads(body)
+    try:
+
+        params = json.loads(body)
+    except JSONDecodeError:
+        params = {
+            "jsonrpc": "2.0",
+        }
+        error_message = "Not a valid JSON document"
+        return jsonrpc_error(params, error_message)
+
     # validate
     checked = validate_jsonrpc(params)
     # do stuff/logic
@@ -58,7 +71,7 @@ async def hello_world(request: Request):
             version=params["jsonrpc"], id=params["id"], error_data=error_message
         )
 
-    result = say_hello(params["params"]["name"])
+    result = await say_hello(params["params"]["name"])
     # serialize and send response
     return jsonrpc_success(params, result)
 
