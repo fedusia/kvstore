@@ -1,6 +1,5 @@
 from fastapi import Request
 import json
-from json import JSONDecodeError
 from kvstorage.core.logic import Storage
 
 # default handler do:
@@ -27,7 +26,7 @@ class JSONRPCHandler:
         # deserialize
         try:
             params = json.loads(body)
-        except JSONDecodeError:
+        except json.JSONDecodeError:
             error_message = "Not a valid JSON document"
             return self.jsonrpc_error(error_message)
 
