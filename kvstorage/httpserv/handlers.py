@@ -9,6 +9,7 @@ import json
 # 1. serialize  response
 # 1. return response
 
+
 def validate_jsonrpc(data: dict):
     try:
         if not data["jsonrpc"] == "2.0":
@@ -41,13 +42,19 @@ def jsonrpc_error(version, id, error_data):
     jsonrpc = {
         "jsonrpc": version,
         "id": id,
-        "error": {
-            "code": -32600,
-            "message": "Invalid Request",
-            "data": error_data
-        },
+        "error": {"code": -32600, "message": "Invalid Request", "data": error_data},
     }
     return json.dumps(jsonrpc)
+
+
+def jsonrpc_success(params):
+    data = serialize_to_jsonrpc(
+        version=params["jsonrpc"],
+        result=say_hello(params["params"]["name"]),
+        id=params["id"],
+    )
+    response = json.dumps(data)
+    return response
 
 
 async def hello_world(request: Request):
@@ -61,21 +68,10 @@ async def hello_world(request: Request):
     if not checked:
         error_message = "Not a valid jsonrpc request"
         return jsonrpc_error(
-            version=params["jsonrpc"],
-            id=params["id"],
-            error_data=error_message
+            version=params["jsonrpc"], id=params["id"], error_data=error_message
         )
-
-    # serialize response
-    data = serialize_to_jsonrpc(
-        version=params["jsonrpc"],
-        result=say_hello(
-            params["params"]["name"]
-        ),
-        id=params["id"]
-    )
-    response = json.dumps(data)
-    return response
+    # serialize and send response
+    return jsonrpc_success(params)
 
 
 # def getter(storage):
