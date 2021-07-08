@@ -38,12 +38,8 @@ def jsonrpc_error(version, id, error_data):
     return json.dumps(jsonrpc)
 
 
-def jsonrpc_success(params):
-    data = {
-        "jsonrpc": params["jsonrpc"],
-        "id": params["id"],
-        "result": say_hello(params["params"]["name"]),
-    }
+def jsonrpc_success(params, result):
+    data = {"jsonrpc": params["jsonrpc"], "id": params["id"], "result": result}
     response = json.dumps(data)
     return response
 
@@ -61,8 +57,10 @@ async def hello_world(request: Request):
         return jsonrpc_error(
             version=params["jsonrpc"], id=params["id"], error_data=error_message
         )
+
+    result = say_hello(params["params"]["name"])
     # serialize and send response
-    return jsonrpc_success(params)
+    return jsonrpc_success(params, result)
 
 
 # def getter(storage):
