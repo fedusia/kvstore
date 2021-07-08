@@ -14,8 +14,8 @@ def create_app():
     storage = Storage(engine=InMemStorage())
 
     api = FastAPI()
-    api.middleware("http")
-    api.add_middleware(BaseHTTPMiddleware, dispatch=jsonrpc_dispatcher)
+    # api.middleware("http")
+    # api.add_middleware(BaseHTTPMiddleware, dispatch=jsonrpc_dispatcher)
 
     router = APIRouter()
     router.add_api_route(path="/", endpoint=hello_world, methods=["POST"])
