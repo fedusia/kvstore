@@ -1,6 +1,7 @@
 from fastapi import Request
 import json
 from json import JSONDecodeError
+from kvstorage.core.logic import Storage
 
 # default handler do:
 # 1. get data from signate
@@ -11,85 +12,94 @@ from json import JSONDecodeError
 # 1. return response
 
 
-def validate_jsonrpc(data: dict):
-    try:
-        if not data["jsonrpc"] == "2.0":
-            return False
-        elif not data["method"]:
-            return False
-        elif not data["id"]:
-            return False
-        elif not data["params"] and not isinstance(data["params"], dict):
-            return False
-    except KeyError:
-        return False
-    return True
-
-
 async def say_hello(name):
     return "Hello, {}".format(name)
 
 
-def jsonrpc_error(error_data, req_id=None):
-    jsonrpc = {
-        "jsonrpc": "2.0",
-        "error": {"code": -32600, "message": "Invalid Request", "data": error_data},
-    }
-    if req_id:
-        jsonrpc["id"] = req_id
-    response = json.dumps(jsonrpc)
-    return response
+class JSONRPCHandler:
+    def __init__(self, engine: Storage):
+        self.storage = engine
 
+    async def dispatch_request(self, request: Request):
+        # get data from body
+        body = await request.body()
 
-def jsonrpc_success(result, req_id=None):
-    data = {"jsonrpc": "2.0", "result": result}
-    if not req_id:
-        return
-    data["id"] = req_id
-    response = json.dumps(data)
-    return response
+        # deserialize
+        try:
+            params = json.loads(body)
+        except JSONDecodeError:
+            error_message = "Not a valid JSON document"
+            return self.jsonrpc_error(error_message)
 
+        # validate
+        checked = self.validate_jsonrpc(params)
+        # do stuff/logic
+        if not checked:
+            error_message = "Not a valid jsonrpc request"
+            return self.jsonrpc_error(error_data=error_message, req_id=params["id"])
 
-async def hello_world(request: Request):
-    # get body
-    body = await request.body()
+        if params["method"] == "say_hello":
+            result = await self.say_hello(params["params"]["name"])
 
-    # deserialize
-    try:
-        params = json.loads(body)
-    except JSONDecodeError:
-        error_message = "Not a valid JSON document"
-        return jsonrpc_error(error_message)
+        elif params["method"] == "set":
+            result = await self.setter(
+                params["params"]["key"], params["params"]["value"]
+            )
 
-    # validate
-    checked = validate_jsonrpc(params)
-    # do stuff/logic
-    if not checked:
-        error_message = "Not a valid jsonrpc request"
-        return jsonrpc_error(error_data=error_message, reqid=params["id"])
+        elif params["method"] == "get":
+            result = await self.getter(params["params"]["key"])
+        else:
+            result = "Method not implemented"
+            self.jsonrpc_error(error_data=result, req_id=params["id"])
 
-    result = await say_hello(params["params"]["name"])
-    # serialize and send response
-    return jsonrpc_success(result, req_id=params["id"])
+        # serialize and send response
+        return self.jsonrpc_success(result, req_id=params["id"])
 
+    async def getter(self, key):
+        value = self.storage.get(key)
+        if value:
+            return value
+        return None
 
-# def getter(storage):
-#     def wrapped_getter(body: JSONRpcRequestModel):
-#         req = body.dict()
-#         params = req["params"]
-#         data = storage.get(params["key"])
-#         resp = JSONRpcResponseModel(result=data, id=req["id"])
-#         return resp
-#
-#     return wrapped_getter
-#
-#
-# def setter(storage):
-#     def wrapped_setter(body: JSONRpcRequestModel):
-#         req = body.dict()
-#         params = req["params"]
-#         data = storage.set(params["key"], params["value"])
-#         resp = JSONRpcResponseModel(result=data, id=req["id"])
-#         return resp
-#
-#     return wrapped_setter
+    async def setter(self, key, value):
+        data = self.storage.set(key, value)
+        return data
+
+    @staticmethod
+    async def say_hello(name):
+        return "Hello, {}".format(name)
+
+    @staticmethod
+    def jsonrpc_error(error_data, req_id=None):
+        jsonrpc = {
+            "jsonrpc": "2.0",
+            "error": {"code": -32600, "message": "Invalid Request", "data": error_data},
+        }
+        if req_id:
+            jsonrpc["id"] = req_id
+        response = json.dumps(jsonrpc)
+        return response
+
+    @staticmethod
+    def validate_jsonrpc(data):
+        try:
+            if not data["jsonrpc"] == "2.0":
+                return False
+            elif not data["method"]:
+                return False
+            elif not data["id"]:
+                return False
+            elif not data["params"] and not isinstance(data["params"], dict):
+                return False
+        except KeyError:
+            return False
+        return True
+
+    @staticmethod
+    def jsonrpc_success(result, req_id=None):
+        data = {"jsonrpc": "2.0", "result": result}
+        if not req_id:
+            return
+        data["id"] = req_id
+        response = json.dumps(data)
+        return response
