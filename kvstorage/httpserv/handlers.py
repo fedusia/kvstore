@@ -29,10 +29,10 @@ def say_hello(name):
     return "Hello, {}".format(name)
 
 
-def jsonrpc_error(version, id, error_data):
+def jsonrpc_error(params, error_data):
     jsonrpc = {
-        "jsonrpc": version,
-        "id": id,
+        "jsonrpc": params["jsonrpc"],
+        "id": params["id"],
         "error": {"code": -32600, "message": "Invalid Request", "data": error_data},
     }
     return json.dumps(jsonrpc)
