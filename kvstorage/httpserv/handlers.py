@@ -30,19 +30,22 @@ async def say_hello(name):
     return "Hello, {}".format(name)
 
 
-def jsonrpc_error(params, error_data):
+def jsonrpc_error(error_data, req_id=None):
     jsonrpc = {
-        "jsonrpc": params["jsonrpc"],
+        "jsonrpc": "2.0",
         "error": {"code": -32600, "message": "Invalid Request", "data": error_data},
     }
-    if params.get("id"):
-        jsonrpc["id"] = params["id"]
+    if req_id:
+        jsonrpc["id"] = req_id
+    response = json.dumps(jsonrpc)
+    return response
 
-    return json.dumps(jsonrpc)
 
-
-def jsonrpc_success(params, result):
-    data = {"jsonrpc": params["jsonrpc"], "id": params["id"], "result": result}
+def jsonrpc_success(result, req_id=None):
+    data = {"jsonrpc": "2.0", "result": result}
+    if not req_id:
+        return
+    data["id"] = req_id
     response = json.dumps(data)
     return response
 
@@ -55,24 +58,19 @@ async def hello_world(request: Request):
     try:
         params = json.loads(body)
     except JSONDecodeError:
-        params = {
-            "jsonrpc": "2.0",
-        }
         error_message = "Not a valid JSON document"
-        return jsonrpc_error(params, error_message)
+        return jsonrpc_error(error_message)
 
     # validate
     checked = validate_jsonrpc(params)
     # do stuff/logic
     if not checked:
         error_message = "Not a valid jsonrpc request"
-        return jsonrpc_error(
-            version=params["jsonrpc"], id=params["id"], error_data=error_message
-        )
+        return jsonrpc_error(error_data=error_message, reqid=params["id"])
 
     result = await say_hello(params["params"]["name"])
     # serialize and send response
-    return jsonrpc_success(params, result)
+    return jsonrpc_success(result, req_id=params["id"])
 
 
 # def getter(storage):
