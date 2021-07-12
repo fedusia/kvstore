@@ -1,4 +1,4 @@
-import os
+import sys, os
 import uvicorn
 from fastapi import FastAPI, APIRouter
 
@@ -15,7 +15,8 @@ def create_app():
         conf_path = os.getenv("APP_CONF_PATH", default="config.json")
         api.conf = ConfigLoader(parser=JSONParser(conf_path)).load_config()
     except ConfigLoaderException:
-        os.exit(1)
+        raise
+        sys.exit(1)
 
     storage = Storage(engine=InMemStorage())
 
