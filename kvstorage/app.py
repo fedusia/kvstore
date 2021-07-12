@@ -8,12 +8,16 @@ from kvstorage.core.logic import Storage
 from kvstorage.core.config import ConfigLoader, JSONParser, ConfigLoaderException
 
 
-def create_app(conf):
+def create_app():
     # logger = config_logger()
+    api = FastAPI()
+    try:
+        conf_path = os.getenv("APP_CONF_PATH", default="config.json")
+        api.conf = ConfigLoader(parser=JSONParser(conf_path)).load_config()
+    except ConfigLoaderException:
+        os.exit(1)
 
     storage = Storage(engine=InMemStorage())
-
-    api = FastAPI()
 
     router = APIRouter()
     router.add_api_route(
@@ -24,12 +28,7 @@ def create_app(conf):
     return api
 
 
-try:
-    config = ConfigLoader(parser=JSONParser("config.json")).load_config()
-except ConfigLoaderException:
-    os.exit(1)
-
-app = create_app(config)
+app = create_app()
 
 if __name__ == "__main__":
-    uvicorn.run(app, host=config["listen"], port=config["port"])  # <- config
+    uvicorn.run(app, host=app.conf["listen"], port=app.conf["port"])  # <- config
