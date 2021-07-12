@@ -25,40 +25,40 @@ class JSONRPCHandler:
 
         # deserialize
         try:
-            params = json.loads(body)
+            query = json.loads(body)
         except json.JSONDecodeError:
             error_message = "Not a valid JSON document"
             return self.jsonrpc_error(error_message)
 
         # validate
-        checked = self.validate_jsonrpc(params)
+        checked = self.validate_jsonrpc(query)
         # do stuff/logic
         if not checked:
             error_message = "Not a valid jsonrpc request"
-            return self.jsonrpc_error(error_data=error_message, req_id=params["id"])
+            return self.jsonrpc_error(error_data=error_message, req_id=query["id"])
 
-        if params["method"] == "say_hello":
-            result = await self.say_hello(params["params"]["name"])
+        elif query["method"] == "set":
+            if not query["params"].get("key") or not query["params"].get("value"):
+                error_message = (
+                    "Should specify params:{'key': <key>, 'value': <value> }"
+                )
+                return self.jsonrpc_error(error_data=error_message, req_id=query["id"])
+            result = await self.setter(query["params"]["key"], query["params"]["value"])
 
-        elif params["method"] == "set":
-            result = await self.setter(
-                params["params"]["key"], params["params"]["value"]
-            )
-
-        elif params["method"] == "get":
-            result = await self.getter(params["params"]["key"])
+        elif query["method"] == "get":
+            result = await self.getter(query["params"]["key"])
+            if not result:
+                error_message = "No such key {}".format(query["params"]["key"])
+                self.jsonrpc_error(error_data=error_message, req_id=query["id"])
         else:
             result = "Method not implemented"
-            self.jsonrpc_error(error_data=result, req_id=params["id"])
+            self.jsonrpc_error(error_data=result, req_id=query["id"])
 
         # serialize and send response
-        return self.jsonrpc_success(result, req_id=params["id"])
+        return self.jsonrpc_success(result, req_id=query["id"])
 
     async def getter(self, key):
-        value = self.storage.get(key)
-        if value:
-            return value
-        return None
+        return self.storage.get(key)
 
     async def setter(self, key, value):
         data = self.storage.set(key, value)
